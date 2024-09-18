@@ -1,47 +1,14 @@
----
-title: "PA1_template"
-author: "Imad-Alhiane"
-date: "2024-09-15"
-output: html_document
----
+# Loading the Data
+unzip(zipfile="activity.zip")
+df <- read.csv("activity.csv")  # Load the activity data from a CSV file
+df$date <- as.Date(df$date, format = "%Y-%m-%d")  # Convert the 'date' column to Date format
 
-# Reproducible Research, Course Project 1
-## Introduction
-
-In this project, we analyze data collected from a personal activity monitoring device that records the number of steps taken by an individual at 5-minute intervals throughout the day. The data spans two months (October and November 2012) and allows us to explore patterns in physical activity. This analysis is part of the "quantified self" movement, which emphasizes the collection of personal data to improve health and self-awareness.
-
-The main objectives are to:
-
-Summarize the total number of steps taken per day.
-
-Visualize the distribution of daily step counts.
-
-Explore average activity patterns.
-
-Handle missing data by imputing steps based on averages for specific intervals.
-
-Compare activity patterns between weekdays and weekends.
-
-## Code Explanation:
-
-1. Loading the Data: The data is first unzipped and loaded from a CSV file. The date column is converted to Date format for easier handling of time-based analysis.
-
-```{r, echo=TRUE}
-# unzip(zipfile="activity.zip")
-df <- read.csv("activity.csv")  
-df$date <- as.Date(df$date, format = "%Y-%m-%d")  
-```
-
-2. Summing Steps Per Day: We calculate the total number of steps per day using the tapply() function, ignoring missing (NA) values. This data is converted into a data frame (steps_per_day_df) for further processing.
-
-```{r, echo=TRUE}
+# Summing the steps per day, ignoring NA values
 steps_per_day <- tapply(df$steps, df$date, sum, na.rm = TRUE)
+
+# Create a data frame from the steps per day
 steps_per_day_df <- data.frame(date = names(steps_per_day), steps = as.vector(steps_per_day))
-```
 
-3. Visualizing Steps Per Day: We plot a histogram of the total steps per day using ggplot2. The plot includes vertical lines showing the mean and median step counts for each day. The lines are colored red and blue for the mean and median, respectively.
-
-```{r, echo=TRUE}
 # Load the ggplot2 library for plotting
 library(ggplot2)
 
@@ -62,17 +29,10 @@ ggplot(steps_per_day_df, aes(x = steps)) +
            y = Inf, label = paste("Mean:", round(mean_val, 2)), color = "red", hjust = 0, vjust = 1.5) +
   annotate("text", x = min(steps_per_day_df$steps, na.rm = TRUE), 
            y = Inf, label = paste("Median:", round(median_val, 2)), color = "blue", hjust = 0, vjust = 4)
-```
 
-4. Calculating Average Steps per 5-Minute Interval: Using the aggregate() function, we calculate the average number of steps taken during each 5-minute interval across all days. This data helps us identify patterns of activity throughout the day.
-
-```{r, echo=TRUE}
+# Calculate the average steps per interval across all days
 averages <- aggregate(x=list(steps=df$steps), by=list(interval=df$interval), FUN=mean, na.rm=TRUE)
-```
 
-5. Highlighting Maximum Average Steps: We identify the maximum average number of steps and the corresponding 5-minute interval. This maximum value is highlighted in the plot with a red point, and a label is added to annotate it.
-
-```{r, echo=TRUE}
 # Find the maximum average steps and corresponding interval
 max_value <- max(averages$steps)
 max_interval <- averages$interval[which.max(averages$steps)]
@@ -85,25 +45,16 @@ ggplot(data=averages, aes(x=interval, y=steps)) +
            vjust = 1, hjust = 1.2, color = "red") +  # Annotate the max value and corresponding interval
   labs(x = "5-min Intervals", y = "Average Number of Steps") +  # Axis labels
   theme_minimal()
-```
 
-6. Handling Missing Data: Many NA values exist in the dataset. We impute missing values by replacing NA in the steps column with the average steps for that specific 5-minute interval.
-
-```{r, echo=TRUE}
 # Handle missing data (NA values in 'steps' column)
-# Count the number of missing values in the 'steps' column
-missing_values <- sum(is.na(df$steps))  # Sum up the TRUE values, which represent missing values
-cat("The number of missing values in the dataset:", missing_values)
+missing <- is.na(df$steps)  # Identify missing values
+table(missing)  # Show how many missing values exist
 
 # Fill NA values in 'steps' with the average steps for the corresponding interval
 df$complet_steps <- ifelse(is.na(df$steps),
                            averages$steps[match(df$interval, averages$interval)],
                            df$steps)
-```
 
-7. Re-exploring the Steps Per Day : After filling in the missing data, we recalculate the total number of steps per day and recompute the mean and median step counts. A new histogram is plotted to visualize the updated distribution of total step.
-
-```{r, echo=TRUE}
 # Calculate the total steps per day after filling in missing data
 steps_per_day_df$complet_steps <- tapply(df$complet_steps, df$date, sum, na.rm = TRUE)
 
@@ -116,7 +67,7 @@ ggplot(steps_per_day_df, aes(x = complet_steps)) +
   geom_histogram(bins = 10, fill = "lightblue", color = "black") +
   geom_vline(aes(xintercept = mean_val2), color = "red", linetype = "dashed", linewidth = 1) +  # Mean line
   geom_vline(aes(xintercept = median_val2), color = "blue", linetype = "dotted", linewidth = 1) +  # Median line
-  labs(title = "Total Steps per Day (with Filled NA Values)", x = "Steps", y = "Frequency") +  # Labels
+  labs(title = "Total Steps per Day (with Filled NA Values)", x = "Steps", y = "Frequency") +  # Axis labels and title
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5)) +  # Center-align the title
   # Annotate the histogram with updated mean and median values
@@ -124,24 +75,15 @@ ggplot(steps_per_day_df, aes(x = complet_steps)) +
            y = Inf, label = paste("Mean:", round(mean_val2, 2)), color = "red", hjust = 0, vjust = 1.5) +
   annotate("text", x = min(steps_per_day_df$complet_steps, na.rm = TRUE), 
            y = Inf, label = paste("Median:", round(median_val2, 2)), color = "blue", hjust = 0, vjust = 4)
-```
 
-The strategy adopted for handling missing data has resulted in a slight shift in the overall distribution. It has become more centralized, with the mean now equal to the median, and the distribution is trending towards a more symmetric shape.
-
-8. Categorizing Days into Weekdays and Weekends: To analyze differences in activity between weekdays and weekends, we create a new column day_type that labels each date as either "weekday" or "weekend."
-
-```{r, echo=TRUE}
 Sys.setlocale("LC_TIME", "English") # Seting locale to English
 
 # Add a new column "day_type" to indicate whether the date is a weekday or weekend
 df$day_type <- ifelse(weekdays(df$date) %in% c("Saturday", "Sunday"), "weekend", "weekday")
+
 # Convert it to a factor for better handling in plots, if necessary
 df$day_type <- factor(df$day_type, levels = c("weekday", "weekend"))
-```
 
-9. Comparing Weekday and Weekend Activity Patterns: Finally, we calculate the average number of steps per 5-minute interval, separately for weekdays and weekends. We visualize these patterns using a panel plot (facet_wrap) that shows the data for weekdays and weekends in separate panels.
-
-```{r, echo=TRUE}
 # Calculate the average steps per interval separately for weekdays and weekends
 averages_day_type <- aggregate(complet_steps ~ interval + day_type, data=df, FUN=mean, na.rm=TRUE)
 
@@ -152,5 +94,3 @@ ggplot(data=averages_day_type, aes(x=interval, y=complet_steps)) +
   labs(x = "5-min Intervals", y = "Average Number of Steps", title = "Average Steps per Interval by Day Type") +  # Axis labels and title
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5))  # Center the title
-```
-
